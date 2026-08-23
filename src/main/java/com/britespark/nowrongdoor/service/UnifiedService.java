@@ -1,19 +1,20 @@
 package com.britespark.nowrongdoor.service;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.springframework.stereotype.Service;
+
 import com.britespark.nowrongdoor.client.BenefitsClient;
 import com.britespark.nowrongdoor.client.ResidentClient;
-import com.britespark.nowrongdoor.dto.BenefitRecord;
+import com.britespark.nowrongdoor.dto.BenefitsData;
 import com.britespark.nowrongdoor.dto.BenefitsResponse;
 import com.britespark.nowrongdoor.dto.Resident;
 import com.britespark.nowrongdoor.dto.ResidentPage;
 import com.britespark.nowrongdoor.dto.SourceResult;
 import com.britespark.nowrongdoor.dto.UnifiedResponse;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 @Service
 public class UnifiedService {
@@ -58,19 +59,29 @@ public class UnifiedService {
         SourceResult<BenefitsResponse> benefitsResult =
                 benefitsClient.getRecords();
 
-        List<BenefitRecord> benefits = new ArrayList<>();
+        BenefitsData benefits;
 
         if (benefitsResult.isAvailable()) {
-            benefits = benefitsResult.getData().getRecords();
+
+            benefits = new BenefitsData(
+                    true,
+                    benefitsResult.getData().getRecords(),
+                    null
+            );
+
+        } else {
+
+            benefits = new BenefitsData(
+                    false,
+                    null,
+                    benefitsResult.getError()
+            );
         }
 
-        // ---------- Combine ----------
         return new UnifiedResponse(
                 residents,
                 benefits,
-                true,
-                benefitsResult.isAvailable(),
-                benefitsResult.getError()
+                true
         );
     }
 }
