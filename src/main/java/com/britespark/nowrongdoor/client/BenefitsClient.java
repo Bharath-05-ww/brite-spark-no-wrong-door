@@ -1,5 +1,8 @@
 package com.britespark.nowrongdoor.client;
 
+import java.time.Duration;
+
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -12,8 +15,16 @@ public class BenefitsClient {
     private final RestClient restClient;
 
     public BenefitsClient(RestClient.Builder restClientBuilder) {
+
+        SimpleClientHttpRequestFactory requestFactory =
+                new SimpleClientHttpRequestFactory();
+
+        requestFactory.setConnectTimeout(Duration.ofSeconds(1));
+        requestFactory.setReadTimeout(Duration.ofSeconds(3));
+
         this.restClient = restClientBuilder
                 .baseUrl("http://127.0.0.1:8082")
+                .requestFactory(requestFactory)
                 .build();
     }
 
