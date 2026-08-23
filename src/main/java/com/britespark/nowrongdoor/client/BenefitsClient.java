@@ -4,6 +4,8 @@ import java.time.Duration;
 
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import com.britespark.nowrongdoor.dto.BenefitsResponse;
@@ -27,31 +29,78 @@ public class BenefitsClient {
                 .requestFactory(requestFactory)
                 .build();
     }
+    private void sleepBeforeRetry() {
+
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 
     public SourceResult<BenefitsResponse> getRecords() {
 
-        try {
+        int maxAttempts = 3;
+        Exception lastException = null;
 
-            BenefitsResponse response = restClient.get()
-                    .uri("/records")
-                    .retrieve()
-                    .body(BenefitsResponse.class);
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
 
-            return new SourceResult<>(
-                    response,
-                    true,
-                    null
-            );
+            try {
 
-        } catch (Exception e) {
+                BenefitsResponse response = restClient.get()
+                        .uri("/records")
+                        .retrieve()
+                        .body(BenefitsResponse.class);
 
-            System.out.println("XML service failed: " + e.getMessage());
+                System.out.println(
+                        "XML request succeeded on attempt "
+                                + attempt
+                );
 
-            return new SourceResult<>(
-                    null,
-                    false,
-                    e.getMessage()
-            );
+                return new SourceResult<>(
+                        response,
+                        true,
+                        null
+                );
+
+            } catch (HttpServerErrorException e) {
+
+                lastException = e;
+
+                System.out.println(
+                        "XML server error on attempt "
+                                + attempt
+                                + ": "
+                                + e.getMessage()
+                );
+
+                if (attempt < maxAttempts) {
+                    sleepBeforeRetry();
+                }
+
+            } catch (ResourceAccessException e) {
+
+                lastException = e;
+
+                System.out.println(
+                        "XML connection/timeout error on attempt "
+                                + attempt
+                                + ": "
+                                + e.getMessage()
+                );
+
+                if (attempt < maxAttempts) {
+                    sleepBeforeRetry();
+                }
+            }
         }
+
+        return new SourceResult<>(
+                null,
+                false,
+                lastException != null
+                        ? lastException.getMessage()
+                        : "XML service unavailable"
+        );
     }
 }
