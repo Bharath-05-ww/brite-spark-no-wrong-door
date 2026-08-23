@@ -38,12 +38,12 @@ public class UnifiedService {
 
         int pageNumber = 1;
         boolean hasMore = true;
+        
 
         while (hasMore) {
 
-            ResidentPage page =
-                    residentClient.getResidents(pageNumber);
-
+            ResidentPage page = residentClient.getResidents(pageNumber);
+            
             for (Resident resident : page.getResults()) {
 
                 if (seenIds.add(resident.getId())) {
@@ -54,6 +54,7 @@ public class UnifiedService {
             hasMore = page.isHas_more();
             pageNumber++;
         }
+       
 
         // ---------- XML ----------
         SourceResult<BenefitsResponse> benefitsResult =
