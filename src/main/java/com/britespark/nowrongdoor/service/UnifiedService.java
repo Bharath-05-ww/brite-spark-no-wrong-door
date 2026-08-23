@@ -1,8 +1,13 @@
 package com.britespark.nowrongdoor.service;
 
+import com.britespark.nowrongdoor.client.BenefitsClient;
 import com.britespark.nowrongdoor.client.ResidentClient;
+import com.britespark.nowrongdoor.dto.BenefitRecord;
+import com.britespark.nowrongdoor.dto.BenefitsResponse;
 import com.britespark.nowrongdoor.dto.Resident;
 import com.britespark.nowrongdoor.dto.ResidentPage;
+import com.britespark.nowrongdoor.dto.SourceResult;
+import com.britespark.nowrongdoor.dto.UnifiedResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -14,23 +19,29 @@ import java.util.Set;
 public class UnifiedService {
 
     private final ResidentClient residentClient;
+    private final BenefitsClient benefitsClient;
 
-    public UnifiedService(ResidentClient residentClient) {
+    public UnifiedService(
+            ResidentClient residentClient,
+            BenefitsClient benefitsClient) {
+
         this.residentClient = residentClient;
+        this.benefitsClient = benefitsClient;
     }
 
-    public List<Resident> getAllResidents() {
+    public UnifiedResponse getUnifiedData() {
 
+        // ---------- REST ----------
         List<Resident> residents = new ArrayList<>();
         Set<String> seenIds = new HashSet<>();
 
         int pageNumber = 1;
         boolean hasMore = true;
-        int totalFetched = 0;
+
         while (hasMore) {
 
-            ResidentPage page = residentClient.getResidents(pageNumber);
-            totalFetched += page.getResults().size();
+            ResidentPage page =
+                    residentClient.getResidents(pageNumber);
 
             for (Resident resident : page.getResults()) {
 
@@ -42,9 +53,24 @@ public class UnifiedService {
             hasMore = page.isHas_more();
             pageNumber++;
         }
-        System.out.println("Total fetched: " + totalFetched);
-        System.out.println("Unique residents: " + residents.size());
 
-        return residents;
+        // ---------- XML ----------
+        SourceResult<BenefitsResponse> benefitsResult =
+                benefitsClient.getRecords();
+
+        List<BenefitRecord> benefits = new ArrayList<>();
+
+        if (benefitsResult.isAvailable()) {
+            benefits = benefitsResult.getData().getRecords();
+        }
+
+        // ---------- Combine ----------
+        return new UnifiedResponse(
+                residents,
+                benefits,
+                true,
+                benefitsResult.isAvailable(),
+                benefitsResult.getError()
+        );
     }
 }
