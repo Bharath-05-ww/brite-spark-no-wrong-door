@@ -98,9 +98,9 @@ public class BenefitsClient {
         return new SourceResult<>(
                 null,
                 false,
-                lastException != null
-                        ? lastException.getMessage()
-                        : "XML service unavailable"
+                "Benefits Register unavailable after "
+                        + maxAttempts
+                        + " attempts"
         );
     }
 }
